@@ -87,12 +87,37 @@ async function run() {
 
         // Job realted APIs 
         app.get('/jobs', async (req, res) => {
-            const email = req.query.email;
+            const email = req.query?.email;
+            const sort = req.query?.sort;
+            const search = req.query?.search;
+            let min = req.query?.min;
+            let max = req.query?.max;
+            // console.log(req.query);
+
             let query = {};
+            let sortQuery = {};
+
             if (email) {
                 query = { hr_email: email }
             }
-            const cursor = jobCollection.find(query);
+            if (sort === 'true') {
+                sortQuery = { "salaryRange.min": -1 };
+            }
+            if (search) {
+                query.location = { $regex: search, $options: 'i' };
+            }
+            if (min || max) {
+                if (!min) min = 0;
+                if (!max) max = Number.MAX_SAFE_INTEGER;
+
+                query = {
+                    ...query,
+                    "salaryRange.min": { $gte: parseInt(min) },
+                    "salaryRange.max": { $lte: parseInt(max) }
+                }
+            }
+
+            const cursor = jobCollection.find(query).sort(sortQuery);
             const result = await cursor.toArray();
             res.send(result);
         })
